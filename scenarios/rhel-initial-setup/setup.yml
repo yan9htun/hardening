@@ -1,0 +1,65 @@
+---
+- name: Perform initial setup for a new RHEL server
+  hosts: all
+  become: true
+  become_method: sudo
+
+  vars_files:
+    # Load encrypted variables from the vault file.
+    - vars/secrets.yml
+
+  tasks:
+    - name: Register the system with Red Hat Subscription Manager
+      community.general.redhat_subscription:
+        username: "{{ rhsm_user }}"
+        password: "{{ rhsm_password }}"
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Update all packages on the system
+      ansible.builtin.yum:
+        name: '*'
+        state: latest
+      when: ansible_os_family == "RedHat"
+
+    - name: Ensure chrony is installed
+      ansible.builtin.package:
+        name: chrony
+        state: present
+
+    - name: Add NTP servers to chrony configuration
+      ansible.builtin.lineinfile:
+        path: /etc/chrony.conf
+        line: "server {{ item }} iburst"
+        regexp: "^server {{ item }} iburst"
+      loop:
+        - 172.24.11.31
+        - 172.24.11.32
+      notify: Restart chronyd
+
+    - name: Ensure chronyd service is running and enabled
+      ansible.builtin.systemd:
+        name: chronyd
+        state: started
+        enabled: yes
+
+    - name: Verify chrony sources
+      ansible.builtin.command:
+        cmd: "chronyc sources"
+      register: chrony_sources_output
+      changed_when: false
+
+    - name: Display chrony sources
+      ansible.builtin.debug:
+        var: chrony_sources_output.stdout_lines
+
+    - name: Disable password expiration for the root user
+      ansible.builtin.command:
+        cmd: "chage -M -1 root"
+      changed_when: true
+
+  handlers:
+    - name: Restart chronyd
+      ansible.builtin.systemd:
+        name: chronyd
+        state: restarted
