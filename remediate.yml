@@ -1,0 +1,42 @@
+---
+- name: Remediate system based on OpenSCAP scan
+  hosts: all
+  become: true
+  vars:
+    arf_file: "arf-{{ inventory_hostname }}.xml"
+    remediation_playbook: "remediation-{{ inventory_hostname }}.yml"
+
+  tasks:
+    - name: Generate remediation playbook from ARF file
+      ansible.builtin.command:
+        cmd: "oscap xccdf generate fix --fix-type ansible --output {{ remediation_playbook }} {{ arf_file }}"
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Import and run the generated remediation playbook
+      ansible.builtin.import_playbook: "{{ remediation_playbook }}"
+
+    - name: Check if reboot is required on RedHat family
+      ansible.builtin.command:
+        cmd: "needs-restarting -r"
+      register: reboot_check_redhat
+      changed_when: false
+      failed_when: false
+      ignore_errors: true
+      when: ansible_os_family == "RedHat"
+
+    - name: Check if reboot is required on Debian family
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_check_debian
+      when: ansible_os_family == "Debian"
+
+    - name: Set reboot required fact
+      ansible.builtin.set_fact:
+        reboot_required: "{{ (reboot_check_redhat.rc == 1) if ansible_os_family == 'RedHat' else (reboot_check_debian.stat.exists) }}"
+
+    - name: Reboot if required to apply remediations
+      ansible.builtin.reboot:
+        msg: "Rebooting to apply remediations"
+      when: reboot_required | bool

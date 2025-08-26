@@ -1,0 +1,13 @@
+# Sample Ansible Inventory File
+
+[rhel_servers]
+# Replace with the hostname or IP address of your target server
+server1.example.com
+
+# You can add more hosts to this group
+# server2.example.com
+# 192.168.1.101
+
+# It's a good practice to define connection variables in a group_vars file
+# but you can also define them here per host, for example:
+# server1.example.com ansible_user=your_user ansible_ssh_private_key_file=~/.ssh/your_key

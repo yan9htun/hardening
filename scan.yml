@@ -1,0 +1,71 @@
+---
+- name: Scan system with OpenSCAP
+  hosts: all
+  become: true
+  vars:
+    # The PCI-DSS profile is generally available, but you may need to adjust it
+    profile: "xccdf_org.ssgproject.content_profile_pci-dss"
+    report_dir: "/tmp/openscap_reports"
+    arf_file: "arf-{{ inventory_hostname }}.xml"
+    report_file: "report-{{ inventory_hostname }}.html"
+
+  tasks:
+    - name: Set OS-specific variables for RedHat family
+      ansible.builtin.set_fact:
+        openscap_packages:
+          - openscap-scanner
+          - scap-security-guide
+          - yum-utils
+        openscap_ds_file: "ssg-rhel{{ ansible_distribution_major_version }}-ds.xml"
+      when: ansible_os_family == "RedHat"
+
+    - name: Set OS-specific variables for Debian family
+      ansible.builtin.set_fact:
+        openscap_packages:
+          - openscap-scanner
+          - scap-security-guide
+        # Note: The datastream for Debian/Ubuntu may vary. This is a common convention.
+        openscap_ds_file: "ssg-ubuntu{{ ansible_distribution_version | replace('.', '') }}-ds.xml"
+      when: ansible_os_family == "Debian"
+
+    - name: Fail if OS family is not supported
+      ansible.builtin.fail:
+        msg: "This playbook does not support the {{ ansible_os_family }} OS family."
+      when: ansible_os_family not in ["RedHat", "Debian"]
+
+    - name: Install OpenSCAP and dependencies
+      ansible.builtin.package:
+        name: "{{ openscap_packages }}"
+        state: present
+
+    - name: Create report directory on the managed node
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Run OpenSCAP scan
+      ansible.builtin.command:
+        cmd: "oscap xccdf eval --profile {{ profile }} --results-arf {{ report_dir }}/{{ arf_file }} --report {{ report_dir }}/{{ report_file }} /usr/share/xml/scap/ssg/content/{{ openscap_ds_file }}"
+      register: oscap_scan
+      changed_when: oscap_scan.rc != 0
+      failed_when: oscap_scan.rc not in [0, 2]
+
+    - name: Create local report directory
+      ansible.builtin.file:
+        path: "./reports"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+
+    - name: Fetch HTML report
+      ansible.builtin.fetch:
+        src: "{{ report_dir }}/{{ report_file }}"
+        dest: "reports/"
+        flat: yes
+
+    - name: Fetch ARF results for remediation
+      ansible.builtin.fetch:
+        src: "{{ report_dir }}/{{ arf_file }}"
+        dest: "./"
+        flat: yes
