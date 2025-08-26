@@ -1,13 +1,26 @@
 # Sample Ansible Inventory File
+#
+# This file is used to define the hosts that Ansible will manage.
+# You can define hosts in groups.
+
+[all:vars]
+# It's a good practice to define common variables for all hosts here.
+# For example, you can define the ansible user for all hosts.
+# ansible_user=your_user
+# ansible_ssh_private_key_file=~/.ssh/your_key
 
 [rhel_servers]
-# Replace with the hostname or IP address of your target server
-server1.example.com
-
-# You can add more hosts to this group
-# server2.example.com
+# Add your Red Hat based servers here
+# server1.example.com
 # 192.168.1.101
 
-# It's a good practice to define connection variables in a group_vars file
-# but you can also define them here per host, for example:
-# server1.example.com ansible_user=your_user ansible_ssh_private_key_file=~/.ssh/your_key
+[debian_servers]
+# Add your Debian based servers here
+# server2.example.com
+
+# You can also define host-specific variables
+# server3.example.com ansible_user=another_user ansible_port=2222
+
+# The playbooks target all hosts in the inventory (`hosts: all`).
+# If you want to run the playbooks only on a specific group, you can use the --limit flag:
+# ansible-playbook -i inventory scan.yml --limit rhel_servers
