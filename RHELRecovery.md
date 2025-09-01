@@ -50,12 +50,36 @@ chown root:root /usr/sbin/sshd /usr/bin/pmlogctl /usr/bin/pmiectl /usr/lib/dracu
 ```bash 
 touch /.autorelabel restorecon -Rv /usr /bin /sbin /usr/lib /usr/sbin
 ```
+OR
+```bash
+setenforce 0
+vi /etc/selinux/config
+```
+change enforicng to disabled. You disabled SELinux, so step 3 (restorecon + autorelabel) can be skipped.
 * * *
 
-### 4\. Reinstall Critical Packages
+### 4\. Correct Local Repo File
+The ISO must be mounted to /mnt before running dnf.
 
+Ensure the subdirectories AppStream and BaseOS exist:
 ```bash
-dnf reinstall -y openssh-server dracut pcp-system-tools
+mount /dev/cdrom /mnt
+ls /mnt
+```
+Make sure /etc/yum.repos.d/local.repo looks like this:
+```bash
+[AppStream]
+name=AppStream
+baseurl=file:///mnt/AppStream
+enabled=1
+gpgcheck=0
+
+[BaseOS]
+name=BaseOS
+baseurl=file:///mnt/BaseOS
+enabled=1
+gpgcheck=0
+
 ```
 
 * * *
