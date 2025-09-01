@@ -1,6 +1,6 @@
 # 🛠️ RHEL Recovery Guide After Failed OSCAP/PCI-DSS Hardening
 
-## 🔹 Scenario
+##  Scenario
 
 After applying **oscap PCI-DSS remediation** on RHEL, the system fails to boot. Errors such as:
 
@@ -10,7 +10,7 @@ This is usually caused by incorrect **permissions**, **SELinux contexts**, or **
 
 * * *
 
-## 🔹 Recovery Procedure
+##  Recovery Procedure
 
 ### 1\. Boot into Rescue Mode
 
@@ -35,19 +35,28 @@ This is usually caused by incorrect **permissions**, **SELinux contexts**, or **
 
 Reset permissions on critical executables:
 
-`chmod 755 /usr/sbin/sshd chmod 755 /usr/bin/pmlogctl chmod 755 /usr/bin/pmiectl chmod 755 /usr/lib/dracut/dracut-initramfs-restore  chown root:root /usr/sbin/sshd /usr/bin/pmlogctl /usr/bin/pmiectl /usr/lib/dracut/dracut-initramfs-restore`
+```bash
+chmod 755 /usr/sbin/sshd 
+chmod 755 /usr/bin/pmlogctl
+chmod 755 /usr/bin/pmiectl
+chmod 755 /usr/lib/dracut/dracut-initramfs-restore
+chown root:root /usr/sbin/sshd /usr/bin/pmlogctl /usr/bin/pmiectl /usr/lib/dracut/dracut-initramfs-restore
+```
 
 * * *
 
 ### 3\. Restore SELinux Contexts
 
-`touch /.autorelabel restorecon -Rv /usr /bin /sbin /usr/lib /usr/sbin`
-
+```bash 
+touch /.autorelabel restorecon -Rv /usr /bin /sbin /usr/lib /usr/sbin
+```
 * * *
 
 ### 4\. Reinstall Critical Packages
 
-`dnf reinstall -y openssh-server dracut pcp-system-tools`
+```bash
+dnf reinstall -y openssh-server dracut pcp-system-tools
+```
 
 * * *
 
@@ -63,7 +72,7 @@ Reset permissions on critical executables:
 
 * * *
 
-## 🔹 Optional: Restore OSCAP Backup
+##  Optional: Restore OSCAP Backup
 
 If permissions/SELinux restore does not work, revert oscap changes:
 
@@ -71,7 +80,7 @@ If permissions/SELinux restore does not work, revert oscap changes:
 
 * * *
 
-## 🔹 Best Practices
+##  Best Practices
 
 -   **Scan first, remediate later:**
     
